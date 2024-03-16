@@ -8,6 +8,10 @@ import 'react-phone-number-input/style.css';
 import PhoneInput from 'react-phone-number-input';
 import { useState } from 'react';
 import { showPassword, showConfirmPassword } from '../utils/utils';
+import Overlay from '../components/Overlay/Overlay';
+import Toasts from '../components/Toasts/Toasts';
+import { toast } from 'react-toastify';
+import useSWR from 'swr';
 
 type Inputs = {
    name: string,
@@ -17,9 +21,11 @@ type Inputs = {
    confirmPassword: string,
 }
 
+
 export default function Signup(){
   const [hidePassword, setHidePassword] = useState(false);
   const [hideConfirmPassword, setHideConfirmPassword] = useState(false);
+  const [overlay, setOverlay] = useState(false);
     const [phone, setPhone] = useState('');
     const {
       register,
@@ -29,12 +35,62 @@ export default function Signup(){
     } = useForm<Inputs>()
 
     const onSubmit: SubmitHandler<Inputs> = (data) => {
-        console.log(data)
+
+          setOverlay(!overlay);
+          if(data.password !== data.confirmPassword){
+              toast.warn("As senhas não conferem!", {
+                position: "top-right"
+              });
+              setOverlay(false);
+              return false;
+          }
+        
+          handleInsert(data);
+        
     }
+
+
+    const handleInsert = async (data) => {
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Outros headers, se necessário
+          },
+          body: JSON.stringify(data), // Corpo da requisição, no formato JSON
+        });
+  
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+  
+        const dataUser = await response.json();
+        setOverlay(false);
+        if(dataUser.status == 'success'){
+          toast.success(dataUser.message, {
+            position: "top-right"
+          });
+        }else if(dataUser.status == 'warning'){
+          toast.warn(dataUser.message, {
+            position: "top-right"
+          });
+        }
+      } catch (error) {
+        setOverlay(false);
+        toast.error('Não foi possível cadastrar!', {
+          position: "top-right"
+        });
+       
+      }
+    };
+
 
      return (
       <div className="flex items-center justify-center pt-32">
-      <div className="columns-sm">
+        <Toasts />
+      <div className="columns-sm relative">
+        <Overlay show={overlay} opacity={overlay} />
          <div className='flex items-center justify-center pb-14 gap-1'>
          <Image src={logoIcon} width={30} height={30} alt="SalesFy"/>
           <Image src={logo} width={100} height={100} alt="SalesFy"/>
@@ -99,6 +155,7 @@ export default function Signup(){
                 type='submit' 
                 className='w-full flex items-center gap-2 justify-center rounded-lg p-3 bg-blue-500 hover:bg-blue-700 transition-all text-white font-semibold text-base'
                 >Criar conta grátis </button>
+                
              </form>
          </div>
       </div>

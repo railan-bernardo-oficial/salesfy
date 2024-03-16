@@ -1,11 +1,15 @@
 'use client'
-import { useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import Image from 'next/image';
 import logo from '../public/logo-salesfy.svg';
 import logoIcon from '../public/icon-salesfy.svg';
 import { FaArrowRight, FaRegEyeSlash } from 'react-icons/fa6';
 import { showPassword } from './utils/utils';
+import { AuthContext } from './contexts/AuthContext';
+import Overlay from './components/Overlay/Overlay';
+import OverlayPage from './components/Overlay/OverlayPage';
+import { parseCookies } from 'nookies';
 
 type Inputs = {
   email: string,
@@ -17,17 +21,24 @@ export default function Home() {
   const [showEmaildInput, setShowEmailInput] = useState(false);
   const [saveEmail, setSaveEmail] = useState('');
   const [hidePassword, setHidePassword] = useState(false);
+  const [overlay, setOverlay] = useState(false);
+  const [visible, setVisible] = useState(true);
+  const { signIn } = useContext(AuthContext);
+  const { '@salesfy.token': token } = parseCookies();
+
   const {
     register,
     handleSubmit,
     watch,
     formState: { errors },
   } = useForm<Inputs>()
-  const onSubmit: SubmitHandler<Inputs> = (data) => {
+  const onSubmit: SubmitHandler<Inputs> = async (data) => {
     setSaveEmail(data.email)
-
+   
     if(data.password.length > 0){
-      console.log('DATA => ', data)
+      setOverlay(!overlay);
+      await signIn(data);
+      return;
     }
 
   }
@@ -37,12 +48,18 @@ export default function Home() {
     setShowEmailInput(!showEmaildInput);
   };
 
-
+  useEffect(()=>{
+    if(!token){
+      setVisible(false)
+    }
+  }, [token, visible])
 
 
   return (
     <div className="flex items-center justify-center h-screen">
-      <div className="columns-sm">
+      <OverlayPage visible={visible} />
+      <div className="columns-sm relative">
+        <Overlay show={overlay} opacity={overlay}/>
         <div className='flex items-center justify-center py-14 gap-1'>
           <Image src={logoIcon} width={30} height={30} alt="SalesFy" />
           <Image src={logo} width={100} height={100} alt="SalesFy" />
