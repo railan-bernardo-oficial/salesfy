@@ -1,15 +1,17 @@
 'use client'
-import { useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import Image from 'next/image';
 import logo from '../public/logo-salesfy.svg';
 import logoIcon from '../public/icon-salesfy.svg';
 import { FaArrowRight, FaRegEyeSlash } from 'react-icons/fa6';
 import { showPassword } from './utils/utils';
-import { AuthContext } from './contexts/AuthContext';
 import Overlay from './components/Overlay/Overlay';
+import { signIn, useSession } from 'next-auth/react';
+import Toasts from './components/Toasts/Toasts';
+import { toast } from 'react-toastify';
+import { useRouter } from 'next/navigation';
 import OverlayPage from './components/Overlay/OverlayPage';
-import { parseCookies } from 'nookies';
 
 type Inputs = {
   email: string,
@@ -22,9 +24,19 @@ export default function Home() {
   const [saveEmail, setSaveEmail] = useState('');
   const [hidePassword, setHidePassword] = useState(false);
   const [overlay, setOverlay] = useState(false);
-  const [visible, setVisible] = useState(true);
-  const { signIn } = useContext(AuthContext);
-  const { '@salesfy.token': token } = parseCookies();
+  const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
+  const [visible, setVisible] = useState(true)
+
+  useEffect(()=> {
+    console.log(sessionStatus)
+     if(sessionStatus === 'authenticated'){
+        router.replace('/dashboard')
+     }else{
+      setVisible(false);
+     }
+
+  }, [sessionStatus, router, visible])
 
   const {
     register,
@@ -37,8 +49,27 @@ export default function Home() {
    
     if(data.password.length > 0){
       setOverlay(!overlay);
-      await signIn(data);
-      return;
+      const res = await signIn("credentials", {
+        redirect: false,
+        email: data.email,
+        password: data.password
+      });
+
+      if(res?.error){
+        setOverlay(false);
+        toast.error('Não foi possível logar-se!', {
+          position: "top-right"
+        });
+      }else{
+        setOverlay(false);
+        toast.success('Logado com sucesso!', {
+          position: "top-right"
+        });
+
+        setTimeout(() => {
+           router.push('dashboard')
+        }, 1100)
+      }
     }
 
   }
@@ -48,18 +79,21 @@ export default function Home() {
     setShowEmailInput(!showEmaildInput);
   };
 
-  useEffect(()=>{
-    if(!token){
-      setVisible(false)
-    }
-  }, [token, visible])
 
+  if(sessionStatus === 'loading'){
+    return (
+       <div className='flex items-center justify-center h-screen'>
+          <OverlayPage visible={visible} />
+       </div>
+    );
+  }
 
   return (
-    <div className="flex items-center justify-center h-screen">
-      <OverlayPage visible={visible} />
+    sessionStatus !== 'authenticated' && (
+      <div className="flex items-center justify-center h-screen">
       <div className="columns-sm relative">
         <Overlay show={overlay} opacity={overlay}/>
+        <Toasts/>
         <div className='flex items-center justify-center py-14 gap-1'>
           <Image src={logoIcon} width={30} height={30} alt="SalesFy" />
           <Image src={logo} width={100} height={100} alt="SalesFy" />
@@ -123,5 +157,6 @@ export default function Home() {
         </div>
       </div>
     </div>
+    )
   );
 }

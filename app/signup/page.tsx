@@ -6,12 +6,11 @@ import logoIcon from '../../public/icon-salesfy.svg';
 import { FaRegEyeSlash } from 'react-icons/fa6';
 import 'react-phone-number-input/style.css';
 import PhoneInput from 'react-phone-number-input';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { showPassword, showConfirmPassword } from '../utils/utils';
 import Overlay from '../components/Overlay/Overlay';
 import Toasts from '../components/Toasts/Toasts';
 import { toast } from 'react-toastify';
-import useSWR from 'swr';
 
 type Inputs = {
    name: string,
@@ -26,7 +25,8 @@ export default function Signup(){
   const [hidePassword, setHidePassword] = useState(false);
   const [hideConfirmPassword, setHideConfirmPassword] = useState(false);
   const [overlay, setOverlay] = useState(false);
-    const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState('');
+  
     const {
       register,
       handleSubmit,
@@ -52,30 +52,34 @@ export default function Signup(){
 
     const handleInsert = async (data) => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/users', {
+        const response = await fetch('api/users', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            // Outros headers, se necessário
           },
-          body: JSON.stringify(data), // Corpo da requisição, no formato JSON
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+            password: data.password,
+          })
         });
   
         if (!response.ok) {
-          throw new Error('Network response was not ok');
+          toast.warn('Não foi possivel cadastrar!', {
+            position: "top-right"
+          });
+          setOverlay(false);
+         
+          return;
         }
   
-        const dataUser = await response.json();
         setOverlay(false);
-        if(dataUser.status == 'success'){
-          toast.success(dataUser.message, {
-            position: "top-right"
-          });
-        }else if(dataUser.status == 'warning'){
-          toast.warn(dataUser.message, {
-            position: "top-right"
-          });
-        }
+       
+        toast.success('Cadastro realizado com sucesso!', {
+          position: "top-right"
+        });
+        
       } catch (error) {
         setOverlay(false);
         toast.error('Não foi possível cadastrar!', {

@@ -1,34 +1,39 @@
-"use client"
-import React, { useEffect, useState } from "react"
-import { useRouter } from "next/navigation";
+'use client'
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react";
 import OverlayPage from "../components/Overlay/OverlayPage";
-import { parseCookies } from "nookies";
 
 export default function Dashboard({ 
    children
  }: {
    children: React.ReactNode
  })
- {  
-  const router = useRouter();
-  const { '@salesfy.token': token } = parseCookies();
-  const [visible, setVisible] = useState(true)
+{
+const router = useRouter();
+const { data: session, status: sessionStatus } = useSession();
+const [visible, setVisible] = useState(true);
 
+useEffect(()=> {
+  if(sessionStatus === 'unauthenticated'){
+    router.replace('/');
+    return;
+  }
+  if(sessionStatus === 'authenticated'){
+    setVisible(false)
+  }
+}, [sessionStatus, router, visible])
 
-  useEffect(()=>{
-    if(!token){
-       router.push('/');
-    }else{
-      setVisible(false);
-      router.push('/dashboard');
-    }
-  },[token, visible])
-
+if(sessionStatus === 'loading' || sessionStatus === 'unauthenticated'){
+  return (
+     <div className='flex items-center justify-center h-screen'>
+        <OverlayPage visible={visible} />
+     </div>
+  );
+}
 
   return (
-    
      <section>
-      <OverlayPage visible={visible} />
       {children}
       </section>
   )
